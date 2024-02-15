@@ -9,7 +9,7 @@ int clr(void){
 }
 
 int dir(void){
-	system("dir");
+	system("ls -al");
 	return 0;
 }
 
@@ -40,6 +40,11 @@ int main(int argc, char *argv[]){
 	
 	if (strcmp("clear",str) != 0){
 		clr();	
+	}
+
+	if (strcmp("dir", str) != 0){
+		//Need to somehow get the argument 
+		dir();
 	}
 
 	
