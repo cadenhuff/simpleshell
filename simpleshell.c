@@ -27,6 +27,7 @@ int environ(void){
 }
 
 int quit(void){
+	exit(0);
 	return 0;
 }
 
@@ -42,28 +43,32 @@ int main(int argc, char *argv[]){
 	char input[200]; 
 	char command[100];
 	char directory[100];
+	while (!feof(stdin)){
+		//Writes prompt to stdout
+		fputs(prompt, stdout);
 
-	//Writes prompt to stdout
-	fputs(prompt, stdout);
-
-	//Read one word command from stdin and stores in str
+		//Read one word command from stdin and stores in str
 	
-	fgets(input, sizeof(input), stdin);
+		fgets(input, sizeof(input), stdin);
 
-  	// Parse input to extract command and directory
-    	sscanf(input, "%s %s", command, directory);
+  		// Parse input to extract command and directory
+    		sscanf(input, "%s %s", command, directory);
 
 
-	if (!strcmp("clear",command)){
-		clr();	
+		if (!strcmp("clear",command)){
+			clr();	
+		}
+
+		else if (!strcmp("dir", command)){
+			
+			dir(directory);
+		}
+		else if (!strcmp("quit", command)){
+			quit();
+		}
+		else{
+			system(command);
+		}
 	}
-
-	if (!strcmp("dir", command)){
-		//Need to somehow get the argument
-		 
-		dir(directory);
-	}
-
-	
 
 }
