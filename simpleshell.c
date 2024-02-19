@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+extern char **environ;
+
+
 
 int clr(void){
 	system("clear");
@@ -9,7 +12,7 @@ int clr(void){
 }
 
 int dir(char directory[]){
-	
+	//Lists directory contents
 	if(strlen(directory) > 0){
 		char command[100];
                 sprintf(command, "ls -al %s", directory);
@@ -21,6 +24,15 @@ int dir(char directory[]){
 	
 	return 0;
 }
+
+int cd(char directory[]){
+	//pwd
+	
+
+	return 0;
+	
+}
+
 
 int environ(void){
 	return 0;
@@ -54,7 +66,7 @@ int main(int argc, char *argv[]){
   		// Parse input to extract command and directory
     		sscanf(input, "%s %s", command, directory);
 
-
+		//Change this logic to switch block
 		if (!strcmp("clear",command)){
 			clr();	
 		}
