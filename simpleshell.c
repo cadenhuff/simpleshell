@@ -2,9 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdbool.h>
 extern char **environ;
 
-
+//Should all funcs be split into seperate files
 
 int clr(void){
 	system("clear");
@@ -69,13 +70,14 @@ int quit(void){
 int main(int argc, char *argv[]){
 	
 	char * prompt = "==>";
-	
-
 	//Command max 100 chars
 	char input[200]; 
 	char command[100];
 	char directory[100];
+	
+	
 	while (!feof(stdin)){
+		
 		//Writes prompt to stdout
 		fputs(prompt, stdout);
 
@@ -84,7 +86,7 @@ int main(int argc, char *argv[]){
 		fgets(input, sizeof(input), stdin);
 
   		// Parse input to extract command and directory
-    		sscanf(input, "%s %s", command, directory);
+    	sscanf(input, "%s %s", command, directory);
 
 		//Change this logic to switch block
 		if (!strcmp("clear",command)){
@@ -92,17 +94,34 @@ int main(int argc, char *argv[]){
 		}
 
 		else if (!strcmp("dir", command)){
-			
 			dir(directory);
 		}
 		else if (!strcmp("quit", command)){
 			quit();
 		}
+		//use fork for this? Also am thinking should out cd in its own file?
 		else if(!strcmp("cd", command)){
 			cd(directory);
 		}
 		else{
-			system(command);
+			pid_t pid;
+			int status;
+			bool dont_wait = false;
+			switch(pid = fork()){
+				case -1:
+					perror("fork");
+				case 0:
+					//execvp(args[0],args);
+					
+				default:
+					
+				if(!dont_wait){
+					waitpid(pid, &status, 0);
+				}
+
+			}
+			wait(NULL);
+
 		}
 	}
 
