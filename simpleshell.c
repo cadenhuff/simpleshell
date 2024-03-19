@@ -50,12 +50,19 @@ int main(int argc, char *argv[]){
 	
 	char * prompt = "==>";
 	//Command max 100 chars
+
+	//Clean this section up, IDK if I need all this, or I think there is a better way to write these vars will the use of the constants
 	char input[200]; 
 	char command[100];
 	char directory[100];
 	int bufferSize = BUFFER_SIZE;
 	
-	
+	bool input_redirection = false;
+	bool output_redirection = false;
+
+	char input_file[200];
+	char output_file[200];
+
 	while (!feof(stdin)){
 		
 		//Writes prompt to stdout
@@ -69,7 +76,7 @@ int main(int argc, char *argv[]){
 		int wordCount = 0; //
 
 
-		 // Allocate memory for the array of strings
+		 // Allocate memory for the array of strings, mem can hel bufferSize num of strings
     	commands = (char **)malloc(bufferSize * sizeof(char *));
     	if (commands == NULL) {
         	printf("Memory allocation failed!\n");
@@ -78,13 +85,33 @@ int main(int argc, char *argv[]){
 		
 		// Tokenize input and store in the array of strings
     	char *token = strtok(input, " \t\n");
+		bool next_word_is_inputfile = false;
+		bool next_word_is_outputfile = false;
     	while (token != NULL) {
         	// Allocate memory for the new string and copy input
-        	commands[wordCount] = strdup(token);
+			commands[wordCount] = strdup(token);
         	if (commands[wordCount] == NULL) {
             	printf("Memory allocation failed!\n");
             	exit(1);
         	}
+        	if (input_redirection) {
+            	strcpy(input_file, token);
+            	input_redirection = false; // Reset the flag
+        	}
+
+        	if (output_redirection) {
+            	strcpy(output_file, token);
+            	output_redirection = false; // Reset the flag
+        	}
+
+        	if (!strcmp("<", token)) {
+            	input_redirection = true;
+        	}
+
+        	if (!strcmp(">", token) || !strcmp(">>", token)) {
+            	output_redirection = true;
+        	}
+
 
         	wordCount++;
 
@@ -108,12 +135,8 @@ int main(int argc, char *argv[]){
         	printf("%s\n", commands[i]);
     	}
 
-
-
-
-		
-
-  		
+		printf("%s\n",output_file);
+		printf("%s\n",input_file);
 
 
 
@@ -139,7 +162,9 @@ int main(int argc, char *argv[]){
 				case -1:
 					perror("fork");
 				case 0:
-					//execvp(args[0],args);
+					//execvp used to execute file, commands[0] cotains name of file, commands is string array of args where 
+					//commnads[0] is the name of the file.
+					execvp(commands[0],commands);
 					
 				default:
 					
@@ -151,6 +176,8 @@ int main(int argc, char *argv[]){
 			wait(NULL);
 
 		}
+		//free commands from memory after running
+		free(commands);
 	}
 
 }
