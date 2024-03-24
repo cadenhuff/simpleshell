@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <string.h>
-#include "util.h"
+#include "myshell.h"
 extern char **environ;
 
 int dir(char* directory, char* output_file, int typeOfRedirection){
@@ -212,21 +212,31 @@ void display(){
 
 
 
-char* readInput(){
+char* readInput(FILE *batch_file){
     char* input = malloc(100); // Allocate memory for input buffer
     if (input == NULL) {
         printf("Memory allocation failed!\n");
         exit(1);
     }
-    fgets(input, 100, stdin); // Read input
-    printf("%s", input);
+ // Read input from the specified file or stdin based on the condition
+    if (batch_file != NULL) {
+        if (fgets(input, 100, batch_file) == NULL) {
+            free(input); // Free memory if fgets fails
+            return NULL;
+        }
+    } else {
+        if (fgets(input, 100, stdin) == NULL) {
+            free(input); // Free memory if fgets fails
+            return NULL;
+        }
+    }
+
+  
     return input;
-
-
 }
 
 
-char** parseInput(char* input){
+char** parseInput(char* input, bool* dont_wait){
     char **commands = NULL; //Array of Strings
 	int wordCount = 0; //
     int bufferSize = 20;
@@ -242,6 +252,12 @@ char** parseInput(char* input){
 		// Tokenize input and store in the array of strings
     char *token = strtok(input, " \t\n");
     while (token != NULL) {
+        if(strcmp(token,"&") == 0){
+            *dont_wait = true;
+            token = strtok(NULL, " \t\n");
+            continue;
+            
+        }
         commands[wordCount] = strdup(token);
     	wordCount++;
 
@@ -285,11 +301,11 @@ void checkForRedirection(char** args, char** input_file, char** output_file, int
 }
 
 
-int forkAndExec(char** args, char* input_file, char* output_file, int typeOfRedirection){
+int forkAndExec(char** args, char* input_file, char* output_file, int typeOfRedirection, bool dont_wait){
     pid_t pid;
 	int status;
     //If there is a &, change this to true
-	bool dontWait = false;
+	
 	switch(pid = fork()){
 		case -1:
 			perror("fork");
@@ -316,7 +332,7 @@ int forkAndExec(char** args, char* input_file, char* output_file, int typeOfRedi
                 perror("exec");
                 return ERROR;
             }
-            printf("askdjfn;alsdkjf;asd");
+            
 
 
             /*if(execvp(args[0],args) == -1){
@@ -327,16 +343,16 @@ int forkAndExec(char** args, char* input_file, char* output_file, int typeOfRedi
 					
 		default:
 				
-		    if(!dontWait){
+		    if(!dont_wait){
 				waitpid(pid, &status, 0);
 			}
             
 		}
-		wait(NULL);
+		
         return CONTINUE;
 }
 
-int runCommand(char** args, char* input_file, char* output_file, int typeOfRedirection){
+int runCommand(char** args, char* input_file, char* output_file, int typeOfRedirection, bool dont_wait){
 
     if (!strcmp("clr",args[0])){
 		return clr();	
@@ -364,7 +380,7 @@ int runCommand(char** args, char* input_file, char* output_file, int typeOfRedir
 		return pause();
     }
 	else{
-		return forkAndExec(args, input_file,output_file, typeOfRedirection);
+		return forkAndExec(args, input_file,output_file, typeOfRedirection, dont_wait);
 	}
     
 }
