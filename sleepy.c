@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+
 unsigned int seconds;
 
 void sighandler(int signum){

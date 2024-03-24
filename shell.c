@@ -32,6 +32,7 @@ int main(int argc, char *argv[]){
 
         status = runCommand(args,input_file,output_file,typeOfRedirection);
 
+        
         free(input);
         free(args);
 

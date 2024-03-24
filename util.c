@@ -3,66 +3,142 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <string.h>
+#include "util.h"
 extern char **environ;
 
-int dir(char* args){
-    return 0;
+int dir(char* directory, char* output_file, int typeOfRedirection){
+    FILE *fp;
+    const char *mode = (typeOfRedirection == 1) ? "w" : (typeOfRedirection == 2) ? "a" : "none";
+    if(strcmp(mode,"none") == 0){
+        if (directory != NULL) {
+            char command[100];
+            sprintf(command, "ls -al %s", directory);
+            system(command);
+        } 
+        else {
+        system("ls -al");
+        }
+        return CONTINUE;
+
+    }
+    fp = fopen(output_file, mode);
+    if(fp == NULL){
+        perror("fopen");
+        return ERROR;
+
+    }
+    if (freopen(output_file,mode,stdout) == NULL){
+        perror("freopen");
+        return ERROR;
+    }
+
+     if (directory != NULL && strcmp(directory, ">") != 0 && strcmp(directory, ">>") != 0) {
+        char command[100];
+        sprintf(command, "ls -al %s", directory);
+        system(command);
+    } else {
+        system("ls -al");
+    }
+    
+    fflush(stdout); // Flush any remaining output
+    fclose(fp); // Close the output file
+    // Redirect stdout back to the terminal
+    if (freopen("/dev/tty", "a", stdout) == NULL) {
+        perror("freopen");
+        return ERROR; // Error restoring stdout
+    }
+    
+    
+    
+    
+    return CONTINUE;
 }
 
 int cd(char* directory){
     if(directory == NULL){
 		printf("PWD : %s\n", getenv("PWD"));
-		return 0;
+		return CONTINUE;
 	}
 	//chdir() function changes the current working directory of the calling process to the directory specified by path. 
 	//If the operation is successful, chdir() returns 0; otherwise, it returns -1 and sets errno to indicate the error.
 	if(chdir(directory) == -1){
 		perror("Directory does not exist");
-		return 1;
+		return ERROR;
 	}
 	//cwd is string used to hold the current working directory
 	char cwd[1024];
 	//use getcwd to set cwd to the current working directory, check for error
 	if (getcwd(cwd, sizeof(cwd)) == NULL) {
         perror("getcwd"); 
-        return 1;
+        return ERROR;
     }
 	
 	//updates PWD environ var to full path of current directory, 1 is the overwrite value meaning if PWD environ var exists, 
 	//the func will overwrite the existing value.
 	if(setenv("PWD", cwd, 1) == -1){
 		perror("Could not set env");
-		return 1;
+		return ERROR;
 	}
 	printf("PWD : %s\n", getenv("PWD"));
-	return 0;
+	return CONTINUE;
 }   
 
-int env(){
+int env(char* output_file, int typeOfRedirection){
+    FILE *fp;
+
+    const char *mode = (typeOfRedirection == 1) ? "w" : (typeOfRedirection == 2) ? "a" : "none";
+    if(strcmp(mode,"none") == 0){
+
+    
+        int i;
+        for (i = 0; environ[i] != NULL; i++)
+            printf("%s\n",environ[i]);
+        return CONTINUE;
+    }
+    fp = fopen(output_file, mode);
+    if(fp == NULL){
+        perror("fopen");
+        return ERROR;
+
+    }
+    if (freopen(output_file,mode,stdout) == NULL){
+        perror("freopen");
+        return ERROR;
+    }
 
     int i;
     for (i = 0; environ[i] != NULL; i++)
         printf("%s\n",environ[i]);
-    return 1;
-   
+        
+
+
+    fflush(stdout); // Flush any remaining output
+    fclose(fp); // Close the output file
+    // Redirect stdout back to the terminal
+    if (freopen("/dev/tty", "a", stdout) == NULL) {
+        perror("freopen");
+        return ERROR; // Error restoring stdout
+    }
+    return CONTINUE;
+
 }
 
 int quit(){
-    return 0;
+    return ERROR;
 }
 
 int clr(){
     int result = system("clear");
     if (result == -1) {
         perror("Error executing clear command");
-        return 0; 
+        return ERROR; 
     } else {
-        return 1; 
+        return CONTINUE; 
     }
 }
 
 int echo(char** args, char* output_file, int typeOfRedirection){
-    //printf("hell");
+    
     FILE *fp;
 
     const char *mode = (typeOfRedirection == 1) ? "w" : (typeOfRedirection == 2) ? "a" : "none";
@@ -73,18 +149,18 @@ int echo(char** args, char* output_file, int typeOfRedirection){
             i++;
         }
         printf("\n");
-        return 1;
+        return CONTINUE;
     }
 
     fp = fopen(output_file, mode);
     if(fp == NULL){
         perror("fopen");
-        return 0;
+        return ERROR;
 
     }
     if (freopen(output_file,mode,stdout) == NULL){
         perror("freopen");
-        return 1;
+        return ERROR;
     }
     int i = 1;
     while(args[i] != NULL && strcmp(args[i], ">") != 0 && strcmp(args[i], ">>") != 0){
@@ -93,13 +169,13 @@ int echo(char** args, char* output_file, int typeOfRedirection){
     }
     printf("\n");
     fflush(stdout); // Flush any remaining output
-        fclose(fp); // Close the output file
-        // Redirect stdout back to the terminal
-        if (freopen("/dev/tty", "a", stdout) == NULL) {
-            perror("freopen");
-            return 1; // Error restoring stdout
-        }
-    return 1;
+    fclose(fp); // Close the output file
+    // Redirect stdout back to the terminal
+    if (freopen("/dev/tty", "a", stdout) == NULL) {
+        perror("freopen");
+        return ERROR; // Error restoring stdout
+    }
+    return CONTINUE;
 
 
     
@@ -108,7 +184,7 @@ int echo(char** args, char* output_file, int typeOfRedirection){
 
 int help(){
 
-    return 0;
+    return CONTINUE;
 }
 
 
@@ -120,7 +196,7 @@ int pause(){
     printf("Continuing with shell operations...\n");
 
 
-    return 1;
+    return CONTINUE;
 
 }
 
@@ -190,6 +266,7 @@ char** parseInput(char* input){
 void checkForRedirection(char** args, char** input_file, char** output_file, int* typeOfRedirection) {
     *input_file = NULL;
     *output_file = NULL;
+    *typeOfRedirection = 0;
 
     for (int i = 0; args[i] != NULL; i++) {
         if (strcmp(args[i], ">") == 0) {
@@ -208,47 +285,55 @@ void checkForRedirection(char** args, char** input_file, char** output_file, int
 }
 
 
-int forkAndExec(char** args, char* input_file, char* output_file){
+int forkAndExec(char** args, char* input_file, char* output_file, int typeOfRedirection){
     pid_t pid;
-		int status;
-		bool dont_wait = false;
-		switch(pid = fork()){
-			case -1:
-				perror("fork");
-			case 0:
-				if(input_file[0] != '\0'){
-					printf("%lu",strlen(input_file));
-					//check if file exists
-					if (access(input_file, F_OK) != -1) {
-       					freopen(input_file, "r", stdin);
-   					}else{ 
-						printf("Input File does not exist");
-						exit(1);
-					}
-				}
-				if(strlen(output_file) > 0){
-					//check if file exists
-					if (access(output_file, F_OK) != -1) {
-        				freopen(output_file, "w", stdout);
-    				}else{ 
-						printf("Ouput File does not exist");
-						exit(1);
-					}
-				}
-				//execvp used to execute file, commands[0] cotains name of file, commands is string array of args where 
-				//commnads[0] is the name of the file.
-				execvp(args[0],args);
+	int status;
+    //If there is a &, change this to true
+	bool dontWait = false;
+	switch(pid = fork()){
+		case -1:
+			perror("fork");
+            return ERROR;
+		case 0: //Child process
+            if (input_file != NULL) {
+                freopen(input_file, "r", stdin);
+            }
+            if (output_file != NULL) {
+                const char *mode = (typeOfRedirection == 1) ? "w" : (typeOfRedirection == 2) ? "a" : NULL;
+                FILE *output = freopen(output_file, mode, stdout);
+                if (output == NULL) {
+                    perror("freopen");
+                    exit(ERROR);
+                }
+            }
+
+
+
+        
+            //execvp used to execute file, commands[0] cotains name of file, commands is string array of args where 
+            //commnads[0] is the name of the file.
+            if((execvp(args[0], args) == -1)){
+                perror("exec");
+                return ERROR;
+            }
+            printf("askdjfn;alsdkjf;asd");
+
+
+            /*if(execvp(args[0],args) == -1){
+                perror("exec");
+                return ERROR;
+            } */
                 
 					
-			default:
+		default:
 				
-			if(!dont_wait){
+		    if(!dontWait){
 				waitpid(pid, &status, 0);
 			}
             
 		}
 		wait(NULL);
-        return 1;
+        return CONTINUE;
 }
 
 int runCommand(char** args, char* input_file, char* output_file, int typeOfRedirection){
@@ -261,13 +346,13 @@ int runCommand(char** args, char* input_file, char* output_file, int typeOfRedir
 	}
 
 	else if (!strcmp("dir", args[0])){
-		return dir(args[1]);
+		return dir(args[1],output_file, typeOfRedirection);
 	}
 	else if (!strcmp("quit", args[0])){
 		return quit();
 	}
 	else if (!strcmp("environ",args[0])){
-		return env();
+		return env(output_file, typeOfRedirection);
 	}
     else if (!strcmp("echo",args[0])){
 		return echo(args, output_file, typeOfRedirection);
@@ -279,8 +364,8 @@ int runCommand(char** args, char* input_file, char* output_file, int typeOfRedir
 		return pause();
     }
 	else{
-		return forkAndExec(args, input_file,output_file);
+		return forkAndExec(args, input_file,output_file, typeOfRedirection);
 	}
-    return 0;
+    
 }
 
