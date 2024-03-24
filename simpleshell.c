@@ -19,19 +19,57 @@ int clr(void){
 	return 0;	
 }
 
-int dir(char directory[]){
-	//Lists directory contents
-	if(strlen(directory) > 0){
-		char command[100];
-                sprintf(command, "ls -al %s", directory);
-                system(command);
-	
-	}else{
-		system("ls -al");
-	}
-	
-	return 0;
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int dir(char directory[], char output_file[],bool output_truncate) {
+    FILE *output_stream; // File pointer for output redirection
+
+    // If output_file is specified, redirect stdout to it
+    if (strlen(output_file) > 0) {
+		if(output_truncate){
+			output_stream = fopen(output_file, "w");
+		}else{
+			output_stream = fopen(output_file, "a");
+		}
+
+        if (output_stream == NULL) {
+            perror("fopen");
+            return 1; // Error opening output file
+        }
+        // Redirect stdout to the output file
+        if (freopen(output_file, "a", stdout) == NULL) {
+            perror("freopen");
+            return 1; // Error redirecting stdout
+        }
+    }
+
+    // Lists directory contents
+    if (strlen(directory) > 0) {
+        char command[100];
+        sprintf(command, "ls -al %s", directory);
+        system(command);
+    } else {
+        system("ls -al");
+    }
+
+    // If output_file is specified, restore stdout
+    if (strlen(output_file) > 0) {
+        fflush(stdout); // Flush any remaining output
+        fclose(output_stream); // Close the output file
+        // Redirect stdout back to the terminal
+        if (freopen("/dev/tty", "a", stdout) == NULL) {
+            perror("freopen");
+            return 1; // Error restoring stdout
+        }
+    }
+
+    return 0;
 }
+
+
+
 
 
 int env(void){
@@ -60,8 +98,11 @@ int main(int argc, char *argv[]){
 	bool input_redirection = false;
 	bool output_redirection = false;
 
-	char input_file[200];
-	char output_file[200];
+	bool output_append = false;
+	bool output_truncate = false;
+
+	char input_file[200] = "";
+	char output_file[200] = "";
 
 	while (!feof(stdin)){
 		
@@ -85,8 +126,6 @@ int main(int argc, char *argv[]){
 		
 		// Tokenize input and store in the array of strings
     	char *token = strtok(input, " \t\n");
-		bool next_word_is_inputfile = false;
-		bool next_word_is_outputfile = false;
     	while (token != NULL) {
         	// Allocate memory for the new string and copy input
 			commands[wordCount] = strdup(token);
@@ -108,9 +147,15 @@ int main(int argc, char *argv[]){
             	input_redirection = true;
         	}
 
-        	if (!strcmp(">", token) || !strcmp(">>", token)) {
-            	output_redirection = true;
+        	if (!strcmp(">", token)) {
+            	output_truncate = true;
+				output_append = false;
+				output_redirection = true;
         	}
+			if(!strcmp(">>",token)){
+				
+				output_redirection = true;
+			}
 
 
         	wordCount++;
@@ -137,7 +182,7 @@ int main(int argc, char *argv[]){
 
 		printf("%s\n",output_file);
 		printf("%s\n",input_file);
-
+		//clear files
 
 
 		//Change this logic to switch block
@@ -146,7 +191,7 @@ int main(int argc, char *argv[]){
 		}
 
 		else if (!strcmp("dir", commands[0])){
-			dir(directory);
+			dir(directory, output_file,output_truncate);
 		}
 		else if (!strcmp("quit", commands[0])){
 			quit();
@@ -162,6 +207,26 @@ int main(int argc, char *argv[]){
 				case -1:
 					perror("fork");
 				case 0:
+					if(input_file[0] != '\0'){
+						printf("%lu",strlen(input_file));
+						//check if file exists
+						if (access(input_file, F_OK) != -1) {
+        					freopen(input_file, "r", stdin);
+    					}else{ 
+							printf("Input File does not exist");
+							exit(1);
+						}
+					}
+
+					if(strlen(output_file) > 0){
+						//check if file exists
+						if (access(output_file, F_OK) != -1) {
+        					freopen(output_file, "w", stdout);
+    					}else{ 
+							printf("Ouput File does not exist");
+							exit(1);
+						}
+					}
 					//execvp used to execute file, commands[0] cotains name of file, commands is string array of args where 
 					//commnads[0] is the name of the file.
 					execvp(commands[0],commands);
@@ -178,6 +243,8 @@ int main(int argc, char *argv[]){
 		}
 		//free commands from memory after running
 		free(commands);
+		strcpy(input_file, "");
+		strcpy(output_file, "");
 	}
 
 }
