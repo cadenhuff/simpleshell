@@ -68,9 +68,39 @@ int dir(char directory[], char output_file[],bool output_truncate) {
     return 0;
 }
 
+int cd(char directory[]){
+	//Might want to add functionality for the ~, (.. does work but not ~)
 
 
-
+	if(strlen(directory) == 0){
+		printf("here");
+		printf("PWD : %s\n", getenv("PWD"));
+		return 0;
+	}
+	//chdir() function changes the current working directory of the calling process to the directory specified by path. 
+	//If the operation is successful, chdir() returns 0; otherwise, it returns -1 and sets errno to indicate the error.
+	if(chdir(directory) == -1){
+		perror("Directory does not exist");
+		return 1;
+	}
+	//cwd is string used to hold the current working directory
+	char cwd[1024];
+	//use getcwd to set cwd to the current working directory, check for error
+	if (getcwd(cwd, sizeof(cwd)) == NULL) {
+        perror("getcwd"); 
+        return 1;
+    }
+	printf("%s",cwd);
+	//updates PWD environ var to full path of current directory, 1 is the overwrite value meaning if PWD environ var exists, 
+	//the func will overwrite the existing value.
+	if(setenv("PWD", cwd, 1) == -1){
+		perror("Could not set env");
+		return 1;
+	}
+	printf("PWD : %s\n", getenv("PWD"));
+	return 0;
+	
+}
 
 int env(void){
 	return 0;
@@ -188,6 +218,9 @@ int main(int argc, char *argv[]){
 		//Change this logic to switch block
 		if (!strcmp("clear",commands[0])){
 			clr();	
+		}
+		else if(!strcmp("cd", commands[0])){
+			cd(directory);
 		}
 
 		else if (!strcmp("dir", commands[0])){
